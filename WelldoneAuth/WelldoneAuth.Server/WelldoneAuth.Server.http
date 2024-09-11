@@ -1,0 +1,6 @@
+@WelldoneAuth.Server_HostAddress = http://localhost:5242
+
+GET {{WelldoneAuth.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
