@@ -1,13 +1,10 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using WelldoneAuth.Lib.Interfaces;
 using WelldoneAuth.Lib.Models;
 using WelldoneAuth.Lib.Models.Auth;
-using WelldoneAuth.Lib.Utilities;
 
 namespace WelldoneAuth.Lib.Services
 {
@@ -21,8 +18,8 @@ namespace WelldoneAuth.Lib.Services
         private readonly string tempTokenKey = "temp-token";
 
         public TestAuthService(ILogger<TestAuthService> logger, QrcodeSseNotifyService sseNotifyService, IConfiguration config,
-            IMemoryCache cache) 
-        { 
+            IMemoryCache cache)
+        {
             this.logger = logger;
             this.sseNotifyService = sseNotifyService;
             this.config = config;
@@ -31,6 +28,7 @@ namespace WelldoneAuth.Lib.Services
 
         public async Task<CommonAPIModel<LoginRes>> PasswordLogin(PasswordLoginReq req)
         {
+            throw new ApplicationException("顆顆");
             if (req.Username == "marco" && req.Password == "123")
             {
                 return new CommonAPIModel<LoginRes>
@@ -96,12 +94,13 @@ namespace WelldoneAuth.Lib.Services
         public async Task<CommonAPIModel<LoginRes>> QrcodeLogin(QrcodeLoginReq req)
         {
             var cacheKey = $"{tempTokenKey}:{req.Guid}";
+            var msg = "";
 
             if (!cache.TryGetValue<string>(cacheKey, out var serverTempToken))
             {
-                throw new ApplicationException("TempToken不存在");
+                msg = "TempToken不存在";
             }
-            if(serverTempToken == req.TempToken)
+            else if (serverTempToken == req.TempToken)
             {
                 cache.Remove(cacheKey);
                 return new CommonAPIModel<LoginRes>
@@ -113,11 +112,15 @@ namespace WelldoneAuth.Lib.Services
                     }
                 };
             }
+            else
+            {
+                msg = "TempToken不正確";
+            }
             cache.Remove(cacheKey);
             return new CommonAPIModel<LoginRes>
             {
                 Success = false,
-                Msg = "登入失敗",
+                Msg = msg,
                 Data = new LoginRes()
             };
         }

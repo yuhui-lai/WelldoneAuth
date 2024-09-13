@@ -1,6 +1,7 @@
 using Lib.AspNetCore.ServerSentEvents;
 using System.Text.Encodings.Web;
 using System.Text.Unicode;
+using WelldoneAuth.Lib.Extensions;
 using WelldoneAuth.Lib.Interfaces;
 using WelldoneAuth.Lib.Providers;
 using WelldoneAuth.Lib.Services;
@@ -8,6 +9,7 @@ using WelldoneAuth.Lib.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddScoped<IAuthService, TestAuthService>();
 
 builder.Services.AddCors(options =>
 {
@@ -37,8 +39,6 @@ builder.Services.AddServerSentEvents<QrcodeSseNotifyService, MemoryCacheSseNotif
     options.KeepaliveInterval = 15;
 });
 
-builder.Services.AddScoped<IAuthService, TestAuthService>();
-
 var app = builder.Build();
 
 app.UseDefaultFiles();
@@ -49,6 +49,11 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+}
+else
+{
+    var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
+    app.UseWelldoneExceptHandler(loggerFactory);
 }
 
 app.UseCors("AllowAll");
