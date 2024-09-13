@@ -3,9 +3,9 @@ using Microsoft.Extensions.Options;
 
 namespace WelldoneAuth.Lib.Services
 {
-    public abstract class SseNotifyService : ServerSentEventsService, IServerSentEventsService
+    public abstract class QrcodeSseNotifyService : ServerSentEventsService, IServerSentEventsService
     {
-        public SseNotifyService(IOptions<ServerSentEventsServiceOptions<ServerSentEventsService>> options)
+        public QrcodeSseNotifyService(IOptions<ServerSentEventsServiceOptions<ServerSentEventsService>> options)
             : base(options.ToBaseServerSentEventsServiceOptions<ServerSentEventsService>())
         { }
 

@@ -39,9 +39,20 @@ namespace WelldoneAuth.Server.Controllers
         }
 
         [HttpPost("{guid}")]
-        public async Task<IActionResult> QrcodeLogin([FromBody]QrcodeLoginReq req, [FromRoute]Guid guid)
+        public async Task<IActionResult> QrcodeLoginNotify([FromBody]QrcodeLoginNotifyReq req, [FromRoute]Guid guid)
         {
-            var res = await authService.QrcodeLogin(req, guid);
+            var res = await authService.QrcodeLoginNotify(req, guid);
+            if (res.Success)
+            {
+                return Ok(res);
+            }
+            return NotFound(res);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> QrcodeLogin([FromBody] QrcodeLoginReq req)
+        {
+            var res = await authService.QrcodeLogin(req);
             if (res.Success)
             {
                 return Ok(res);

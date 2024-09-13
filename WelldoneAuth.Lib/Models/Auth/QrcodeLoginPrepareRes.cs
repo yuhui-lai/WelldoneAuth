@@ -8,7 +8,6 @@ namespace WelldoneAuth.Lib.Models.Auth
 {
     public class QrcodeLoginPrepareRes
     {
-        public Guid Guid { get; set; }
-        public byte[] QrcodeImg { get; set; }        
+        public string QrcodeGuid { get; set; }
     }
 }

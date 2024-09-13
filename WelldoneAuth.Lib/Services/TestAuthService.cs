@@ -1,5 +1,7 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using WelldoneAuth.Lib.Interfaces;
@@ -12,14 +14,19 @@ namespace WelldoneAuth.Lib.Services
     public class TestAuthService : IAuthService
     {
         private readonly ILogger<TestAuthService> logger;
-        private readonly SseNotifyService sseNotifyService;
+        private readonly QrcodeSseNotifyService sseNotifyService;
         private readonly IConfiguration config;
+        // 定義 IMemoryCache 變數
+        private readonly IMemoryCache cache;
+        private readonly string tempTokenKey = "temp-token";
 
-        public TestAuthService(ILogger<TestAuthService> logger, SseNotifyService sseNotifyService, IConfiguration config) 
+        public TestAuthService(ILogger<TestAuthService> logger, QrcodeSseNotifyService sseNotifyService, IConfiguration config,
+            IMemoryCache cache) 
         { 
             this.logger = logger;
             this.sseNotifyService = sseNotifyService;
             this.config = config;
+            this.cache = cache;
         }
 
         public async Task<CommonAPIModel<LoginRes>> PasswordLogin(PasswordLoginReq req)
@@ -51,37 +58,68 @@ namespace WelldoneAuth.Lib.Services
             {
                 Data = new QrcodeLoginPrepareRes
                 {
-                    Guid = guid,
-                    QrcodeImg = QrcodeUtil.Create($"{config["QrcodeLogin:QrcodeContentTitle"]}:{guid}")
+                    QrcodeGuid = $"{config["QrcodeLogin:QrcodeContentTitle"]}:{guid}",
+                    //QrcodeImg = QrcodeUtil.Create($"{config["QrcodeLogin:QrcodeContentTitle"]}:{guid}")
                     //LoginUrl = $"{apiPathBase}/api/TestAuth/QrcodeLogin/{guid}",
                     //SseUrl = $"{apiPathBase}/qrcode-login-sse/{guid}"
                 }
             };
         }
 
-        public async Task<CommonAPIModel<LoginRes>> QrcodeLogin(QrcodeLoginReq req, Guid guid)
+        public async Task<CommonAPIModel<QrcodeLoginNotifyRes>> QrcodeLoginNotify(QrcodeLoginNotifyReq req, Guid guid)
         {
+            // 驗證帳號跟device token
             if (req.DeviceToken == "123")
             {
-                LoginRes loginRes = new()
+                Guid tempToken = Guid.NewGuid();
+                await sseNotifyService.Notify(guid, tempToken.ToString());
+                var cacheEntryOptions = new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromSeconds(30));
+                cache.Set($"{tempTokenKey}:{guid}", tempToken.ToString(), cacheEntryOptions);
+                return new CommonAPIModel<QrcodeLoginNotifyRes>
                 {
-                    DisplayName = req.Username//"Marco"
-                };
-                await sseNotifyService.Notify(guid, JsonSerializer.Serialize(loginRes));
-
-                return new CommonAPIModel<LoginRes>
-                {
-                    Data = loginRes
+                    Data = new QrcodeLoginNotifyRes
+                    {
+                        TempToken = tempToken.ToString(),
+                    }
                 };
             }
-            var errRes = new CommonAPIModel<LoginRes>
+            var errRes = new CommonAPIModel<QrcodeLoginNotifyRes>
+            {
+                Success = false,
+                Msg = "登入失敗",
+                Data = new QrcodeLoginNotifyRes()
+            };
+            await sseNotifyService.Notify(guid, JsonSerializer.Serialize(errRes));
+            return errRes;
+        }
+
+        public async Task<CommonAPIModel<LoginRes>> QrcodeLogin(QrcodeLoginReq req)
+        {
+            var cacheKey = $"{tempTokenKey}:{req.Guid}";
+
+            if (!cache.TryGetValue<string>(cacheKey, out var serverTempToken))
+            {
+                throw new ApplicationException("TempToken不存在");
+            }
+            if(serverTempToken == req.TempToken)
+            {
+                cache.Remove(cacheKey);
+                return new CommonAPIModel<LoginRes>
+                {
+                    Msg = "登入成功",
+                    Data = new LoginRes
+                    {
+                        DisplayName = "Kobe"
+                    }
+                };
+            }
+            cache.Remove(cacheKey);
+            return new CommonAPIModel<LoginRes>
             {
                 Success = false,
                 Msg = "登入失敗",
                 Data = new LoginRes()
             };
-            await sseNotifyService.Notify(guid, JsonSerializer.Serialize(errRes));
-            return errRes;
         }
     }
 }

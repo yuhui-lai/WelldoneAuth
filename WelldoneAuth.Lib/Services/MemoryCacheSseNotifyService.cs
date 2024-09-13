@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 
 namespace WelldoneAuth.Lib.Services
 {
-    public class MemoryCacheSseNotifyService : SseNotifyService, IServerSentEventsService
+    public class MemoryCacheSseNotifyService : QrcodeSseNotifyService, IServerSentEventsService
     {
         // 定義 IMemoryCache 變數
         private readonly IMemoryCache cache;
@@ -43,8 +43,12 @@ namespace WelldoneAuth.Lib.Services
                     // 無回應處理
                     await SendEventAsync(guid, "error", "No response");
                 else
+                {
                     // 發送回應訊息
                     await SendEventAsync(guid, "message", res);
+                    cache.Remove($"{sseCacheMsgKey}:{guid}");
+                }
+                    
             });
         }
 

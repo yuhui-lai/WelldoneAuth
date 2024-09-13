@@ -6,9 +6,8 @@ using System.Threading.Tasks;
 
 namespace WelldoneAuth.Lib.Models.Auth
 {
-    public class QrcodeLoginReq
+    public class QrcodeLoginNotifyRes
     {
-        public string Guid { get; set; }
         public string TempToken { get; set; }
     }
 }
